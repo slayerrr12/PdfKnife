@@ -16,7 +16,8 @@
     "preview": "vite preview",
     "dist": "npm run build && electron-builder",
     "dist:win": "npm run build && electron-builder --win nsis",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "test:smoke": "tsx --test tests/smoke.test.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -44,6 +45,7 @@
     "electron": "^32.2.7",
     "electron-builder": "^25.1.8",
     "typescript": "^5.7.2",
+    "tsx": "^4.19.3",
     "tsup": "^8.3.5",
     "vite": "^5.4.11",
     "wait-on": "^8.0.1"

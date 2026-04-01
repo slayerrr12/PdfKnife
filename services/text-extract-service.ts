@@ -10,8 +10,9 @@ import { resolveAssetsRoot, resolveUnpackedNodeModule } from './runtime';
 
 async function extractSelectableText(pdfPath: string, reporter: ProgressReporter): Promise<string[]> {
   const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
+  const data = new Uint8Array(await fs.readFile(pdfPath));
   const loadingTask = pdfjs.getDocument({
-    data: await fs.readFile(pdfPath),
+    data,
     useSystemFonts: true,
     isEvalSupported: false,
   });
