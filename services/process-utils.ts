@@ -8,9 +8,24 @@ export async function runExecFile(
   args: string[],
   cwd?: string,
 ): Promise<{ stdout: string; stderr: string }> {
-  return execFileAsync(command, args, {
-    cwd,
-    windowsHide: true,
-    maxBuffer: 1024 * 1024 * 32,
-  });
+  try {
+    return await execFileAsync(command, args, {
+      cwd,
+      windowsHide: true,
+      maxBuffer: 1024 * 1024 * 32,
+    });
+  } catch (error) {
+    const stderr =
+      typeof error === 'object' && error && 'stderr' in error && typeof error.stderr === 'string'
+        ? error.stderr.trim()
+        : '';
+    const stdout =
+      typeof error === 'object' && error && 'stdout' in error && typeof error.stdout === 'string'
+        ? error.stdout.trim()
+        : '';
+    const baseMessage = error instanceof Error ? error.message : 'Command execution failed.';
+    const detail = stderr || stdout;
+
+    throw new Error(detail ? `${baseMessage}\n${detail}` : baseMessage);
+  }
 }

@@ -3,9 +3,6 @@ import { test } from 'node:test';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
-
 import sharp from 'sharp';
 import { PDFDocument, StandardFonts, degrees, rgb } from 'pdf-lib';
 
@@ -13,8 +10,6 @@ import { executeOperation } from '../services/operations';
 import { loadPdf } from '../services/pdf-utils';
 import type { ProgressReporter } from '../services/progress';
 import type { WorkerRuntimeContext } from '../services/contracts';
-
-const execFileAsync = promisify(execFile);
 
 const reporter: ProgressReporter = {
   report() {
@@ -282,70 +277,60 @@ test('raster and compression workflows generate outputs', async () => {
   }
 });
 
-test('password workflow reports a clear setup error when qpdf is unavailable', async () => {
+test('password workflow can add and remove protection with the bundled qpdf binary', async () => {
   const workspace = await createTempDir('pdfknife-password-');
   const runtime = createRuntime(workspace);
   const sourcePdf = path.join(workspace, 'source.pdf');
 
   try {
     await createFixturePdf(sourcePdf, ['Password page 1']);
+    const protectedPath = path.join(workspace, 'protected.pdf');
+    const unprotectedPath = path.join(workspace, 'unprotected.pdf');
 
-    let qpdfAvailable = true;
-    try {
-      await execFileAsync('qpdf', ['--version']);
-    } catch {
-      qpdfAvailable = false;
-    }
+    await executeOperation(
+      runtime,
+      'password',
+      {
+        pdfPath: sourcePdf,
+        outputPath: protectedPath,
+        mode: 'add',
+        password: 'secret123',
+        ownerPassword: 'owner123',
+      },
+      reporter,
+    );
+    assert.ok(await fileExists(protectedPath));
 
-    if (qpdfAvailable) {
-      const protectedPath = path.join(workspace, 'protected.pdf');
-      const unprotectedPath = path.join(workspace, 'unprotected.pdf');
+    await executeOperation(
+      runtime,
+      'password',
+      {
+        pdfPath: protectedPath,
+        outputPath: unprotectedPath,
+        mode: 'remove',
+        password: 'secret123',
+        ownerPassword: '',
+      },
+      reporter,
+    );
+    assert.ok(await fileExists(unprotectedPath));
+    assert.equal((await loadPdf(unprotectedPath)).getPageCount(), 1);
 
-      await executeOperation(
-        runtime,
-        'password',
-        {
-          pdfPath: sourcePdf,
-          outputPath: protectedPath,
-          mode: 'add',
-          password: 'secret123',
-          ownerPassword: 'owner123',
-        },
-        reporter,
-      );
-      assert.ok(await fileExists(protectedPath));
-
-      await executeOperation(
+    await assert.rejects(
+      executeOperation(
         runtime,
         'password',
         {
           pdfPath: protectedPath,
-          outputPath: unprotectedPath,
+          outputPath: path.join(workspace, 'wrong-password.pdf'),
           mode: 'remove',
-          password: 'secret123',
+          password: 'wrong-secret',
           ownerPassword: '',
         },
         reporter,
-      );
-      assert.ok(await fileExists(unprotectedPath));
-    } else {
-      await assert.rejects(
-        () =>
-          executeOperation(
-            runtime,
-            'password',
-            {
-              pdfPath: sourcePdf,
-              outputPath: path.join(workspace, 'protected.pdf'),
-              mode: 'add',
-              password: 'secret123',
-              ownerPassword: '',
-            },
-            reporter,
-          ),
-        /QPDF binary is missing/i,
-      );
-    }
+      ),
+      /invalid password|incorrect password|password/i,
+    );
   } finally {
     await fs.rm(workspace, { recursive: true, force: true });
   }

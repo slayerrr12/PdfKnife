@@ -198,6 +198,10 @@ button {
   margin-bottom: 18px;
 }
 
+.fields--two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .field {
   display: flex;
   flex-direction: column;
@@ -230,6 +234,10 @@ input[type='range'] {
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 12px;
   margin-bottom: 18px;
+}
+
+.folder-row__spacer {
+  min-height: 1px;
 }
 
 .button {

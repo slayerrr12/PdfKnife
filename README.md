@@ -1,29 +1,23 @@
 # Offline PDF Toolkit
 
-Offline PDF Toolkit is a privacy-first Electron desktop app for converting, editing, protecting, and managing PDFs without sending any file to a server.
+Offline PDF Toolkit is a privacy-first Electron desktop app with two focused offline workflows: `PDF -> Image` and `Remove Password`. Files stay on the device and are processed locally through Electron worker threads.
 
 ## Highlights
 
 - `PDF -> Image` with JPG, PNG, and WebP export
-- `Image -> PDF` with margins, page size, and orientation control
-- `Merge`, `Split`, `Rotate`, and `Reorder` workflows
-- `Metadata` editing and privacy cleanup
-- `Watermark` support for text or images
-- `Password` add/remove support through local `qpdf`
-- `Text extraction` with optional offline OCR fallback through `tesseract.js`
+- `Remove Password` by entering the current PDF password and exporting a clean unlocked copy
+- Drag-and-drop input for both workflows
 - Worker-thread execution for heavy jobs
-- Drag-and-drop UI, thumbnail previews, dark/light mode, undo/redo, and local operation history
+- Offline Windows packaging with bundled `qpdf`
 
 ## Tech Stack
 
 - Electron
 - React + Vite
 - Node.js worker threads
-- `pdf-lib` for structural edits
-- `pdfjs-dist` for previews and embedded text extraction
 - `pdf-poppler` for PDF rasterization
 - `sharp` for image optimization
-- `tesseract.js` for optional OCR
+- `qpdf` for offline password removal
 
 ## Project Structure
 
@@ -69,20 +63,14 @@ The packaged installer will be written to `release/`.
 
 ### Password workflows
 
-`Add password` and `Remove password` rely on `qpdf`. Put `qpdf.exe` in either:
+Windows packaging already includes `qpdf` under `assets/binaries/qpdf/windows`.
+
+For local development, the app can use `qpdf.exe` from either:
 
 - `assets/binaries/qpdf/windows/qpdf.exe`
 - `assets/binaries/qpdf/qpdf.exe`
 
 If `qpdf` is already on the system `PATH`, the app will use that as a fallback.
-
-### OCR workflows
-
-To keep OCR fully offline, store Tesseract language packs under:
-
-- `assets/binaries/tesseract/tessdata/eng.traineddata.gz`
-
-You can add more languages beside `eng` as needed.
 
 ### Preparing bundled binaries from zip archives
 
@@ -103,25 +91,23 @@ The script extracts archives from `assets/packages/` into `assets/binaries/`.
 
 ### Renderer
 
-- `renderer/src/App.tsx` provides the shell layout, history rail, and tool routing.
-- Panel components under `renderer/src/components/panels/` keep each workflow isolated.
-- Thumbnail previews use `pdfjs-dist` directly in the renderer for responsive feedback.
+- `renderer/src/App.tsx` renders a single focused screen with two cards: image conversion and password removal.
+- Shared UI components handle drag-and-drop, progress, and result reveal actions.
 
 ### Services and workers
 
 - `workers/task-worker.ts` executes heavy jobs off the UI thread.
-- `services/operations.ts` dispatches requests to the individual PDF modules.
-- Shared helpers cover page parsing, temp file handling, image fitting, rasterization, and process execution.
+- `services/operations.ts` dispatches requests to the active PDF modules.
+- Shared helpers cover temp file handling, rasterization, process execution, and bundled binary resolution.
 
 ## Current Implementation Notes
 
-- Compression uses a raster-rebuild strategy, which is effective for image-heavy PDFs but may reduce text/vector fidelity.
-- OCR activates only when local Tesseract language packs are available.
-- Password features depend on local `qpdf` availability.
+- The current UI intentionally exposes only `PDF -> Image` and `Remove Password`.
+- Password removal creates a new unlocked PDF file and never overwrites the source unless you explicitly pick the same path.
+- Wrong-password and missing-binary cases surface as user-visible errors from the worker process.
 
 ## Suggested Next Steps
 
-- Bundle signed Windows binaries for `qpdf` and Tesseract language data
 - Add cancellation support for long-running jobs
-- Introduce thumbnail virtualization for very large documents
-- Expand OCR language management inside the UI
+- Add a lightweight PDF preview before conversion or unlock
+- Add an explicit success toast with an `Open folder` action
