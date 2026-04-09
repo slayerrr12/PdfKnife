@@ -29,8 +29,8 @@ function createWindow(): BrowserWindow {
   const win = new BrowserWindow({
     width: 1560,
     height: 980,
-    minWidth: 960,
-    minHeight: 680,
+    minWidth: 720,
+    minHeight: 560,
     backgroundColor: '#0b1020',
     title: APP_NAME,
     webPreferences: {

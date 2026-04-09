@@ -15,7 +15,7 @@
     "build:main": "tsup electron-main/main.ts electron-main/preload.ts workers/task-worker.ts --format cjs --out-dir dist-electron --external electron --sourcemap --clean",
     "preview": "vite preview",
     "dist": "npm run build && electron-builder",
-    "dist:win": "npm run build && electron-builder --win nsis",
+    "dist:win": "npm run build && electron-builder --win nsis && node scripts/create-uninstaller-helper.mjs",
     "lint": "tsc --noEmit",
     "test:smoke": "tsx --test tests/smoke.test.ts"
   },
