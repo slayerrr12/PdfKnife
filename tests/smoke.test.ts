@@ -166,6 +166,19 @@ test('core structural PDF workflows succeed on generated fixtures', async () => 
       },
       reporter,
     );
+    const removedPagesPath = path.join(workspace, 'removed-pages.pdf');
+    await executeOperation(
+      runtime,
+      'remove-pages',
+      {
+        pdfPath: pdfA,
+        outputPath: removedPagesPath,
+        removedPages: [1],
+      },
+      reporter,
+    );
+    assert.equal((await loadPdf(removedPagesPath)).getPageCount(), 2);
+
     const extractedPath = path.join(workspace, 'reordered.txt');
     await executeOperation(
       runtime,
@@ -182,6 +195,24 @@ test('core structural PDF workflows succeed on generated fixtures', async () => 
     const extractedText = await fs.readFile(extractedPath, 'utf8');
     assert.match(extractedText, /Alpha page 3/);
     assert.ok(extractedText.indexOf('Alpha page 3') < extractedText.indexOf('Alpha page 1'));
+
+    const removedPagesTextPath = path.join(workspace, 'removed-pages.txt');
+    await executeOperation(
+      runtime,
+      'extract-text',
+      {
+        pdfPath: removedPagesPath,
+        outputPath: removedPagesTextPath,
+        format: 'txt',
+        useOcr: false,
+        ocrLanguage: 'eng',
+      },
+      reporter,
+    );
+    const removedPagesText = await fs.readFile(removedPagesTextPath, 'utf8');
+    assert.match(removedPagesText, /Alpha page 1/);
+    assert.doesNotMatch(removedPagesText, /Alpha page 2/);
+    assert.match(removedPagesText, /Alpha page 3/);
 
     const metadataPath = path.join(workspace, 'metadata.pdf');
     await executeOperation(

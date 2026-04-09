@@ -4,6 +4,7 @@ export type ToolId =
   | 'dashboard'
   | 'pdf-to-image'
   | 'image-to-pdf'
+  | 'remove-pages'
   | 'merge'
   | 'split'
   | 'compress'
@@ -47,6 +48,12 @@ export interface ImageToPdfPayload {
 export interface PdfMergePayload {
   pdfPaths: string[];
   outputPath: string;
+}
+
+export interface PdfRemovePagesPayload {
+  pdfPath: string;
+  outputPath: string;
+  removedPages: number[];
 }
 
 export interface SplitRange {
@@ -128,6 +135,7 @@ export interface TextExtractPayload {
 export type OperationPayloadMap = {
   'pdf-to-image': PdfToImagePayload;
   'image-to-pdf': ImageToPdfPayload;
+  'remove-pages': PdfRemovePagesPayload;
   merge: PdfMergePayload;
   split: PdfSplitPayload;
   compress: PdfCompressionPayload;
@@ -233,6 +241,7 @@ export interface DesktopBridge {
     operation: K,
     payload: OperationPayloadMap[K],
   ) => Promise<BaseOperationResult>;
+  cancelCurrentOperation: (reason?: string) => Promise<boolean>;
   onTaskProgress: (listener: (progress: WorkerTaskProgress) => void) => () => void;
   getPdfInfo: (filePath: string) => Promise<PdfInfo>;
   readFileBuffer: (filePath: string) => Promise<ArrayBuffer>;

@@ -7,6 +7,7 @@ import type {
   PasswordPayload,
   PdfCompressionPayload,
   PdfMergePayload,
+  PdfRemovePagesPayload,
   PdfReorderPayload,
   PdfRotatePayload,
   PdfSplitPayload,
@@ -22,6 +23,7 @@ import { updateMetadata } from './metadata-service';
 import { mergePdfs } from './merge-service';
 import { handlePasswordProtection } from './password-service';
 import { convertPdfToImages } from './pdf-to-image-service';
+import { removePdfPages } from './remove-pages-service';
 import { reorderPdf } from './reorder-service';
 import { rotatePdf } from './rotate-service';
 import { splitPdf } from './split-service';
@@ -39,6 +41,8 @@ export async function executeOperation<K extends OperationKind>(
       return convertPdfToImages(runtime, payload as PdfToImagePayload, reporter);
     case 'image-to-pdf':
       return convertImagesToPdf(payload as ImageToPdfPayload, reporter);
+    case 'remove-pages':
+      return removePdfPages(payload as PdfRemovePagesPayload, reporter);
     case 'merge':
       return mergePdfs(payload as PdfMergePayload, reporter);
     case 'split':

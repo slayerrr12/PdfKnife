@@ -28,6 +28,7 @@ export function PdfToImagePanel({
           title="Add PDFs"
           description="Drag and drop PDF files for local raster conversion."
           cta="Choose PDFs"
+          acceptedExtensions={['pdf']}
           onPick={onPickFiles}
           onFilesDropped={onSelectFiles}
         />
@@ -98,11 +99,12 @@ export function ImageToPdfPanel({
 }: ImageToPdfPanelProps) {
   return (
     <div className="tool-layout">
-      <Section title="Source Images" description="Merge images into a single PDF in your chosen order.">
+      <Section title="Source Files" description="Convert supported image formats into a single PDF in your chosen order.">
         <DropZone
-          title="Add images"
-          description="Supports JPG, PNG, WebP, TIFF, and BMP."
-          cta="Choose images"
+          title="Add files to convert"
+          description="Supports JPG, PNG, WebP, TIFF, BMP, and JPEG."
+          cta="Choose files"
+          acceptedExtensions={['jpg', 'jpeg', 'png', 'webp', 'bmp', 'tif', 'tiff']}
           onPick={onPickFiles}
           onFilesDropped={onSelectFiles}
         />
@@ -146,7 +148,7 @@ export function ImageToPdfPanel({
           />
         </Field>
         <button type="button" className="button" onClick={onRun}>
-          Build PDF
+          Convert to PDF
         </button>
       </Section>
     </div>
@@ -177,6 +179,7 @@ export function MergePanel({
           title="Add PDFs to merge"
           description="Drop multiple PDFs and arrange them before exporting."
           cta="Choose PDFs"
+          acceptedExtensions={['pdf']}
           onPick={onPickFiles}
           onFilesDropped={onSelectFiles}
         />

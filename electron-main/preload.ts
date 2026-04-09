@@ -15,6 +15,9 @@ const bridge: DesktopBridge = {
   runOperation<K extends OperationKind>(operation: K, payload: OperationPayloadMap[K]) {
     return ipcRenderer.invoke('operation:run', operation, payload);
   },
+  cancelCurrentOperation(reason?: string) {
+    return ipcRenderer.invoke('operation:cancelCurrent', reason);
+  },
   onTaskProgress(listener: (progress: WorkerTaskProgress) => void) {
     const wrapped = (_event: Electron.IpcRendererEvent, progress: WorkerTaskProgress) => {
       listener(progress);

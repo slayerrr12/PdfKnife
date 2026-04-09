@@ -34,6 +34,7 @@ export function MetadataPanel({
           description="Edit title, author, subject, and privacy-related metadata fields."
           cta="Choose PDF"
           allowMultiple={false}
+          acceptedExtensions={['pdf']}
           onPick={onPickPdf}
           onFilesDropped={(paths) => onSelectPdf(paths[0])}
         />
@@ -87,14 +88,15 @@ export function WatermarkPanel({
     <div className="tool-layout tool-layout--preview">
       <div className="tool-layout__content">
         <Section title="Watermark">
-          <DropZone
-            title="Choose a PDF"
-            description="Apply text or image watermarks with control over opacity and placement."
-            cta="Choose PDF"
-            allowMultiple={false}
-            onPick={onPickPdf}
-            onFilesDropped={(paths) => onSelectPdf(paths[0])}
-          />
+        <DropZone
+          title="Choose a PDF"
+          description="Apply text or image watermarks with control over opacity and placement."
+          cta="Choose PDF"
+          allowMultiple={false}
+          acceptedExtensions={['pdf']}
+          onPick={onPickPdf}
+          onFilesDropped={(paths) => onSelectPdf(paths[0])}
+        />
           <div className="fields fields--three">
             <Field label="Type">
               <select value={form.type} onChange={(event) => onPatch({ type: event.target.value as 'text' | 'image' })}>
@@ -185,6 +187,7 @@ export function PasswordPanel({
           description="Add or remove PDF password protection using local binaries."
           cta="Choose PDF"
           allowMultiple={false}
+          acceptedExtensions={['pdf']}
           onPick={onPickPdf}
           onFilesDropped={(paths) => onSelectPdf(paths[0])}
         />
@@ -234,6 +237,7 @@ export function ExtractTextPanel({
           description="Extract selectable text, with optional offline OCR fallback for scanned pages."
           cta="Choose PDF"
           allowMultiple={false}
+          acceptedExtensions={['pdf']}
           onPick={onPickPdf}
           onFilesDropped={(paths) => onSelectPdf(paths[0])}
         />

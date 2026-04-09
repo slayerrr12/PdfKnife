@@ -5,6 +5,7 @@ import type {
   PasswordPayload,
   PdfCompressionPayload,
   PdfMergePayload,
+  PdfRemovePagesPayload,
   PdfReorderPayload,
   PdfRotatePayload,
   PdfSplitPayload,
@@ -19,6 +20,7 @@ import { DEFAULT_DPI, DEFAULT_FONT_SIZE, DEFAULT_MARGIN, DEFAULT_QUALITY } from 
 export interface ToolForms {
   pdfToImage: PdfToImagePayload;
   imageToPdf: ImageToPdfPayload;
+  removePages: PdfRemovePagesPayload;
   merge: PdfMergePayload;
   split: PdfSplitPayload;
   compress: PdfCompressionPayload;
@@ -50,6 +52,11 @@ export function createDefaultToolForms(): ToolForms {
       pageSize: 'A4',
       margins: DEFAULT_MARGIN,
       orientation: 'auto',
+    },
+    removePages: {
+      pdfPath: '',
+      outputPath: '',
+      removedPages: [],
     },
     merge: {
       pdfPaths: [],

@@ -18,13 +18,19 @@ import { APP_NAME } from '../services/constants';
 import { loadPdf } from '../services/pdf-utils';
 
 let mainWindow: BrowserWindow | null = null;
+let activeTask:
+  | {
+      taskId: string;
+      cancel: (reason: string) => Promise<void>;
+    }
+  | null = null;
 
 function createWindow(): BrowserWindow {
   const win = new BrowserWindow({
     width: 1560,
     height: 980,
-    minWidth: 1200,
-    minHeight: 760,
+    minWidth: 960,
+    minHeight: 680,
     backgroundColor: '#0b1020',
     title: APP_NAME,
     webPreferences: {
@@ -57,6 +63,17 @@ function getWorkerPath(): string {
   return path.join(__dirname, '..', 'workers', 'task-worker.js');
 }
 
+async function cancelActiveTask(reason = 'Operation canceled.'): Promise<boolean> {
+  const task = activeTask;
+  if (!task) {
+    return false;
+  }
+
+  activeTask = null;
+  await task.cancel(reason);
+  return true;
+}
+
 async function runOperationInWorker<K extends OperationKind>(
   win: BrowserWindow,
   operation: K,
@@ -74,29 +91,59 @@ async function runOperationInWorker<K extends OperationKind>(
     const worker = new Worker(getWorkerPath(), {
       workerData: request,
     });
+    let settled = false;
 
-      worker.on('message', (event: WorkerTaskEvent) => {
+    const clearTask = () => {
+      if (activeTask?.taskId === taskId) {
+        activeTask = null;
+      }
+    };
+
+    const finalize = async (handler: () => void) => {
+      if (settled) {
+        return;
+      }
+
+      settled = true;
+      clearTask();
+      handler();
+
+      try {
+        await worker.terminate();
+      } catch {
+        // Worker may already be exiting.
+      }
+    };
+
+    activeTask = {
+      taskId,
+      cancel: async (reason: string) => {
+        await finalize(() => reject(new Error(reason)));
+      },
+    };
+
+    worker.on('message', (event: WorkerTaskEvent) => {
       if (event.type === 'progress') {
         win.webContents.send('task:progress', event.payload);
         return;
       }
 
       if (event.type === 'done') {
-        resolve(event.payload.result);
-        worker.terminate().catch(() => undefined);
+        void finalize(() => resolve(event.payload.result));
         return;
       }
 
-      reject(new Error(event.payload.error));
-      worker.terminate().catch(() => undefined);
+      void finalize(() => reject(new Error(event.payload.error)));
     });
 
     worker.on('error', (error) => {
-      reject(error);
+      void finalize(() => reject(error));
     });
 
     worker.on('exit', (code) => {
-      if (code !== 0) {
+      clearTask();
+      if (!settled && code !== 0) {
+        settled = true;
         reject(new Error(`Worker exited with code ${code}`));
       }
     });
@@ -154,8 +201,13 @@ app.whenReady().then(() => {
       if (!mainWindow) {
         throw new Error('Main window is unavailable.');
       }
+      await cancelActiveTask('Previous operation canceled because a new one started.');
       return runOperationInWorker(mainWindow, operation, payload);
     },
+  );
+
+  ipcMain.handle('operation:cancelCurrent', async (_event, reason?: string) =>
+    cancelActiveTask(reason ?? 'Operation canceled by user.'),
   );
 
   ipcMain.handle('pdf:getInfo', async (_event, filePath: string) => {
@@ -213,6 +265,7 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', () => {
+  void cancelActiveTask('Application closed.');
   if (process.platform !== 'darwin') {
     app.quit();
   }

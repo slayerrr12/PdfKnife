@@ -1,6 +1,7 @@
 import {
   ArrowDownToLine,
   FileImage,
+  FileMinus2,
   FileOutput,
   Files,
   KeyRound,
@@ -24,11 +25,12 @@ const TOOL_ITEMS: Array<{
   icon: typeof FileImage;
 }> = [
   { id: 'dashboard', icon: Sparkles },
-  { id: 'pdf-to-image', icon: FileImage },
-  { id: 'image-to-pdf', icon: FileOutput },
   { id: 'merge', icon: Files },
   { id: 'split', icon: ScissorsLineDashed },
   { id: 'compress', icon: ArrowDownToLine },
+  { id: 'remove-pages', icon: FileMinus2 },
+  { id: 'image-to-pdf', icon: FileOutput },
+  { id: 'pdf-to-image', icon: FileImage },
   { id: 'rotate', icon: PencilRuler },
   { id: 'reorder', icon: Layers3 },
   { id: 'metadata', icon: Tag },

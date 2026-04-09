@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties, type MouseEvent, type ReactNode } from 'react';
 import { CSS } from '@dnd-kit/utilities';
 import {
   DndContext,
@@ -25,35 +25,80 @@ interface PdfThumbnailGridProps {
   pageOrder?: number[];
   onOrderChange?: (order: number[]) => void;
   highlightedPages?: number[];
+  selectedPages?: number[];
+  removedPages?: number[];
+  onPageClick?: (
+    pageNumber: number,
+    modifiers: { shiftKey: boolean; metaKey: boolean; ctrlKey: boolean },
+  ) => void;
 }
 
-async function renderPdfThumbnails(filePath: string): Promise<ThumbnailPage[]> {
-  const buffer = await window.pdfToolkit.readFileBuffer(filePath);
-  const pdfDocument = await getDocument({
-    data: buffer,
-    useSystemFonts: true,
-    isEvalSupported: false,
-  }).promise;
+async function canvasToObjectUrl(canvas: HTMLCanvasElement): Promise<string> {
+  const blob = await new Promise<Blob | null>((resolve) => {
+    canvas.toBlob(resolve, 'image/png');
+  });
 
-  const results: ThumbnailPage[] = [];
-  for (let pageNumber = 1; pageNumber <= pdfDocument.numPages; pageNumber += 1) {
-    const page = await pdfDocument.getPage(pageNumber);
-    const viewport = page.getViewport({ scale: 0.24 });
-    const canvas = window.document.createElement('canvas');
-    const context = canvas.getContext('2d');
-    if (!context) {
-      continue;
-    }
-    canvas.width = viewport.width;
-    canvas.height = viewport.height;
-    await page.render({ canvasContext: context, viewport }).promise;
-    results.push({
-      pageNumber,
-      imageUrl: canvas.toDataURL('image/png'),
-    });
+  if (!blob) {
+    return canvas.toDataURL('image/png');
   }
 
-  return results;
+  return URL.createObjectURL(blob);
+}
+
+function PageCard({
+  page,
+  highlight,
+  selected,
+  removed,
+  onClick,
+  dragHandle,
+  dragStyle,
+}: {
+  page: ThumbnailPage;
+  highlight: boolean;
+  selected: boolean;
+  removed: boolean;
+  onClick?: (event: MouseEvent<HTMLButtonElement>) => void;
+  dragHandle?: ReactNode;
+  dragStyle?: CSSProperties;
+}) {
+  const className = [
+    'thumbnail-card',
+    highlight ? 'thumbnail-card--highlight' : '',
+    selected ? 'thumbnail-card--selected' : '',
+    removed ? 'thumbnail-card--removed' : '',
+    onClick ? 'thumbnail-card--interactive' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  const content = (
+    <>
+      <div className="thumbnail-card__toolbar">
+        <span>Page {page.pageNumber}</span>
+        <div className="thumbnail-card__toolbar-actions">
+          {selected ? <span className="thumbnail-card__badge">Selected</span> : null}
+          {removed ? <span className="thumbnail-card__badge thumbnail-card__badge--danger">Removed</span> : null}
+          {dragHandle}
+        </div>
+      </div>
+      <img src={page.imageUrl} alt={`Preview of page ${page.pageNumber}`} />
+    </>
+  );
+
+  if (onClick) {
+    return (
+      <button type="button" className={className} onClick={onClick} style={dragStyle}>
+        {content}
+      </button>
+    );
+  }
+
+  return (
+    <div className={className} style={dragStyle}>
+      {content}
+    </div>
+  );
 }
 
 function SortableThumb({
@@ -70,36 +115,23 @@ function SortableThumb({
   return (
     <div
       ref={setNodeRef}
-      className={`thumbnail-card ${highlight ? 'thumbnail-card--highlight' : ''}`}
       style={{
         transform: CSS.Transform.toString(transform),
         transition,
       }}
     >
-      <div className="thumbnail-card__toolbar">
-        <span>Page {page.pageNumber}</span>
-        <button type="button" className="icon-button" {...attributes} {...listeners}>
-          <GripVertical size={14} />
-        </button>
-      </div>
-      <img src={page.imageUrl} alt={`Preview of page ${page.pageNumber}`} />
-    </div>
-  );
-}
-
-function StaticThumb({
-  page,
-  highlight,
-}: {
-  page: ThumbnailPage;
-  highlight: boolean;
-}) {
-  return (
-    <div className={`thumbnail-card ${highlight ? 'thumbnail-card--highlight' : ''}`}>
-      <div className="thumbnail-card__toolbar">
-        <span>Page {page.pageNumber}</span>
-      </div>
-      <img src={page.imageUrl} alt={`Preview of page ${page.pageNumber}`} />
+      <PageCard
+        page={page}
+        highlight={highlight}
+        selected={false}
+        removed={false}
+        dragStyle={undefined}
+        dragHandle={
+          <span className="icon-button thumbnail-card__drag" {...attributes} {...listeners}>
+            <GripVertical size={14} />
+          </span>
+        }
+      />
     </div>
   );
 }
@@ -109,28 +141,85 @@ export function PdfThumbnailGrid({
   pageOrder,
   onOrderChange,
   highlightedPages = [],
+  selectedPages = [],
+  removedPages = [],
+  onPageClick,
 }: PdfThumbnailGridProps) {
   const [pages, setPages] = useState<ThumbnailPage[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loadingState, setLoadingState] = useState<{ loading: boolean; total: number; rendered: number }>({
+    loading: false,
+    total: 0,
+    rendered: 0,
+  });
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    renderPdfThumbnails(filePath)
-      .then((nextPages) => {
-        if (!cancelled) {
-          setPages(nextPages);
+    let activeUrls: string[] = [];
+
+    setPages([]);
+    setLoadingState({ loading: true, total: 0, rendered: 0 });
+
+    const render = async () => {
+      const buffer = await window.pdfToolkit.readFileBuffer(filePath);
+      const pdfDocument = await getDocument({
+        data: buffer,
+        useSystemFonts: true,
+        isEvalSupported: false,
+      }).promise;
+
+      try {
+        setLoadingState({ loading: true, total: pdfDocument.numPages, rendered: 0 });
+
+        for (let pageNumber = 1; pageNumber <= pdfDocument.numPages; pageNumber += 1) {
+          if (cancelled) {
+            break;
+          }
+
+          const page = await pdfDocument.getPage(pageNumber);
+          const viewport = page.getViewport({ scale: 0.24 });
+          const canvas = window.document.createElement('canvas');
+          const context = canvas.getContext('2d');
+          if (!context) {
+            continue;
+          }
+
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
+          await page.render({ canvasContext: context, viewport }).promise;
+
+          const imageUrl = await canvasToObjectUrl(canvas);
+          activeUrls.push(imageUrl);
+
+          if (!cancelled) {
+            setPages((current) => [...current, { pageNumber, imageUrl }]);
+            setLoadingState({ loading: true, total: pdfDocument.numPages, rendered: pageNumber });
+          }
+
+          await new Promise((resolve) => window.setTimeout(resolve, 0));
         }
-      })
-      .finally(() => {
+      } finally {
+        await pdfDocument.destroy();
         if (!cancelled) {
-          setLoading(false);
+          setLoadingState((current) => ({ ...current, loading: false }));
         }
-      });
+      }
+    };
+
+    void render().catch(() => {
+      if (!cancelled) {
+        setLoadingState({ loading: false, total: 0, rendered: 0 });
+      }
+    });
 
     return () => {
       cancelled = true;
+      activeUrls.forEach((url) => {
+        if (url.startsWith('blob:')) {
+          URL.revokeObjectURL(url);
+        }
+      });
+      activeUrls = [];
     };
   }, [filePath]);
 
@@ -161,8 +250,12 @@ export function PdfThumbnailGrid({
     return null;
   }
 
-  if (loading) {
-    return <div className="panel-empty">Rendering page thumbnails…</div>;
+  if (orderedPages.length === 0 && loadingState.loading) {
+    return (
+      <div className="panel-empty">
+        Rendering page thumbnails ({loadingState.rendered}/{loadingState.total || '...'})
+      </div>
+    );
   }
 
   if (orderedPages.length === 0) {
@@ -170,23 +263,44 @@ export function PdfThumbnailGrid({
   }
 
   const grid = (
-    <div className="thumbnail-grid">
-      {orderedPages.map((page) =>
-        onOrderChange && pageOrder ? (
-          <SortableThumb
-            key={page.pageNumber}
-            page={page}
-            highlight={highlightedPages.includes(page.pageNumber)}
-          />
-        ) : (
-          <StaticThumb
-            key={page.pageNumber}
-            page={page}
-            highlight={highlightedPages.includes(page.pageNumber)}
-          />
-        ),
-      )}
-    </div>
+    <>
+      {loadingState.loading ? (
+        <div className="thumbnail-grid__status">
+          Rendering page thumbnails {loadingState.rendered}/{loadingState.total}
+        </div>
+      ) : null}
+      <div className="thumbnail-grid">
+        {orderedPages.map((page) => {
+          const highlight = highlightedPages.includes(page.pageNumber);
+          const selected = selectedPages.includes(page.pageNumber);
+          const removed = removedPages.includes(page.pageNumber);
+
+          if (onOrderChange && pageOrder) {
+            return <SortableThumb key={page.pageNumber} page={page} highlight={highlight} />;
+          }
+
+          return (
+            <PageCard
+              key={page.pageNumber}
+              page={page}
+              highlight={highlight}
+              selected={selected}
+              removed={removed}
+              onClick={
+                onPageClick
+                  ? (event) =>
+                      onPageClick(page.pageNumber, {
+                        shiftKey: event.shiftKey,
+                        metaKey: event.metaKey,
+                        ctrlKey: event.ctrlKey,
+                      })
+                  : undefined
+              }
+            />
+          );
+        })}
+      </div>
+    </>
   );
 
   if (!onOrderChange || !pageOrder) {

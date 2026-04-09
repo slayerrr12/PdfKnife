@@ -27,6 +27,7 @@ interface AppState {
   addRecentFiles: (paths: string[]) => void;
   addHistory: (entry: AppHistoryEntry) => void;
   setCurrentProgress: (progress: WorkerTaskProgress | null) => void;
+  resetSession: () => void;
   undo: () => void;
   redo: () => void;
 }
@@ -102,6 +103,18 @@ export const useAppStore = create<AppState>()(
       setCurrentProgress(currentProgress) {
         set({ currentProgress });
       },
+      resetSession() {
+        set((state) => ({
+          activeTool: DEFAULT_TOOL,
+          toolForms: createDefaultToolForms(),
+          currentProgress: null,
+          recentFiles: [],
+          history: [],
+          undoStack: [],
+          redoStack: [],
+          theme: state.theme,
+        }));
+      },
       undo() {
         const { undoStack, redoStack, activeTool, toolForms } = get();
         const previous = undoStack[undoStack.length - 1];
@@ -131,12 +144,22 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: 'offline-pdf-toolkit-state',
+      version: 2,
+      migrate: (persistedState) => {
+        const nextTheme =
+          typeof persistedState === 'object' &&
+          persistedState &&
+          'theme' in persistedState &&
+          (persistedState.theme === 'dark' || persistedState.theme === 'light')
+            ? persistedState.theme
+            : DEFAULT_THEME;
+
+        return {
+          theme: nextTheme,
+        };
+      },
       partialize: (state) => ({
         theme: state.theme,
-        activeTool: state.activeTool,
-        toolForms: state.toolForms,
-        recentFiles: state.recentFiles,
-        history: state.history,
       }),
     },
   ),

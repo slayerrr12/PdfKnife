@@ -1,5 +1,6 @@
 import type {
   PdfCompressionPayload,
+  PdfRemovePagesPayload,
   PdfReorderPayload,
   PdfRotatePayload,
   PdfSplitPayload,
@@ -35,6 +36,7 @@ export function SplitPanel({
             description="Split by ranges, extract selected pages, or export every page separately."
             cta="Choose PDF"
             allowMultiple={false}
+            acceptedExtensions={['pdf']}
             onPick={onPickPdf}
             onFilesDropped={(paths) => onSelectPdf(paths[0])}
           />
@@ -91,7 +93,9 @@ export function SplitPanel({
               <button
                 type="button"
                 className="button button--ghost"
-                onClick={() => onPatch({ ranges: [...form.ranges, { label: `Part ${form.ranges.length + 1}`, range: '' }] })}
+                onClick={() =>
+                  onPatch({ ranges: [...form.ranges, { label: `Part ${form.ranges.length + 1}`, range: '' }] })
+                }
               >
                 Add range
               </button>
@@ -104,7 +108,11 @@ export function SplitPanel({
       </div>
       <div className="tool-layout__preview">
         <Section title="Page Preview">
-          {form.pdfPath ? <PdfThumbnailGrid filePath={form.pdfPath} /> : <div className="panel-empty">Choose a PDF to preview its pages.</div>}
+          {form.pdfPath ? (
+            <PdfThumbnailGrid filePath={form.pdfPath} />
+          ) : (
+            <div className="panel-empty">Choose a PDF to preview its pages.</div>
+          )}
         </Section>
       </div>
     </div>
@@ -136,12 +144,16 @@ export function CompressPanel({
           description="Rebuild the PDF with optimized page images to reduce file size."
           cta="Choose PDF"
           allowMultiple={false}
+          acceptedExtensions={['pdf']}
           onPick={onPickPdf}
           onFilesDropped={(paths) => onSelectPdf(paths[0])}
         />
         <div className="fields fields--three">
           <Field label="Compression level">
-            <select value={form.level} onChange={(event) => onPatch({ level: event.target.value as 'low' | 'medium' | 'high' })}>
+            <select
+              value={form.level}
+              onChange={(event) => onPatch({ level: event.target.value as 'low' | 'medium' | 'high' })}
+            >
               <option value="low">Low compression</option>
               <option value="medium">Balanced</option>
               <option value="high">High compression</option>
@@ -149,12 +161,21 @@ export function CompressPanel({
           </Field>
           <Field label="Grayscale pages">
             <label className="toggle">
-              <input type="checkbox" checked={form.grayscale} onChange={(event) => onPatch({ grayscale: event.target.checked })} />
+              <input
+                type="checkbox"
+                checked={form.grayscale}
+                onChange={(event) => onPatch({ grayscale: event.target.checked })}
+              />
               <span>Enable</span>
             </label>
           </Field>
           <Field label="Output PDF">
-            <OutputPathRow value={form.outputPath} placeholder="Save compressed PDF as..." onChange={(value) => onPatch({ outputPath: value })} onPick={onPickOutput} />
+            <OutputPathRow
+              value={form.outputPath}
+              placeholder="Save compressed PDF as..."
+              onChange={(value) => onPatch({ outputPath: value })}
+              onPick={onPickOutput}
+            />
           </Field>
         </div>
         <button type="button" className="button" onClick={onRun}>
@@ -193,6 +214,7 @@ export function RotatePanel({
             description="Rotate selected pages while keeping the document local."
             cta="Choose PDF"
             allowMultiple={false}
+            acceptedExtensions={['pdf']}
             onPick={onPickPdf}
             onFilesDropped={(paths) => onSelectPdf(paths[0])}
           />
@@ -201,14 +223,22 @@ export function RotatePanel({
               <input value={form.pageSelection} onChange={(event) => onPatch({ pageSelection: event.target.value })} />
             </Field>
             <Field label="Angle">
-              <select value={form.angle} onChange={(event) => onPatch({ angle: Number(event.target.value) as 90 | 180 | 270 })}>
-                <option value={90}>90°</option>
-                <option value={180}>180°</option>
-                <option value={270}>270°</option>
+              <select
+                value={form.angle}
+                onChange={(event) => onPatch({ angle: Number(event.target.value) as 90 | 180 | 270 })}
+              >
+                <option value={90}>90 degrees</option>
+                <option value={180}>180 degrees</option>
+                <option value={270}>270 degrees</option>
               </select>
             </Field>
             <Field label="Output PDF">
-              <OutputPathRow value={form.outputPath} placeholder="Save rotated PDF as..." onChange={(value) => onPatch({ outputPath: value })} onPick={onPickOutput} />
+              <OutputPathRow
+                value={form.outputPath}
+                placeholder="Save rotated PDF as..."
+                onChange={(value) => onPatch({ outputPath: value })}
+                onPick={onPickOutput}
+              />
             </Field>
           </div>
           <button type="button" className="button" onClick={onRun}>
@@ -218,7 +248,11 @@ export function RotatePanel({
       </div>
       <div className="tool-layout__preview">
         <Section title="Selected Pages">
-          {form.pdfPath ? <PdfThumbnailGrid filePath={form.pdfPath} highlightedPages={highlightedPages} /> : <div className="panel-empty">Choose a PDF to preview its pages.</div>}
+          {form.pdfPath ? (
+            <PdfThumbnailGrid filePath={form.pdfPath} highlightedPages={highlightedPages} />
+          ) : (
+            <div className="panel-empty">Choose a PDF to preview its pages.</div>
+          )}
         </Section>
       </div>
     </div>
@@ -251,11 +285,17 @@ export function ReorderPanel({
             description="Drag page thumbnails into a new order, then export a reordered copy."
             cta="Choose PDF"
             allowMultiple={false}
+            acceptedExtensions={['pdf']}
             onPick={onPickPdf}
             onFilesDropped={(paths) => onSelectPdf(paths[0])}
           />
           <Field label="Output PDF">
-            <OutputPathRow value={form.outputPath} placeholder="Save reordered PDF as..." onChange={(value) => onPatch({ outputPath: value })} onPick={onPickOutput} />
+            <OutputPathRow
+              value={form.outputPath}
+              placeholder="Save reordered PDF as..."
+              onChange={(value) => onPatch({ outputPath: value })}
+              onPick={onPickOutput}
+            />
           </Field>
           <button type="button" className="button" onClick={onRun}>
             Export reordered PDF
@@ -265,9 +305,144 @@ export function ReorderPanel({
       <div className="tool-layout__preview">
         <Section title="Drag Pages">
           {form.pdfPath ? (
-            <PdfThumbnailGrid filePath={form.pdfPath} pageOrder={form.pageOrder} onOrderChange={(pageOrder) => onPatch({ pageOrder })} />
+            <PdfThumbnailGrid
+              filePath={form.pdfPath}
+              pageOrder={form.pageOrder}
+              onOrderChange={(pageOrder) => onPatch({ pageOrder })}
+            />
           ) : (
             <div className="panel-empty">Choose a PDF to arrange its pages.</div>
+          )}
+        </Section>
+      </div>
+    </div>
+  );
+}
+
+interface RemovePagesPanelProps {
+  form: PdfRemovePagesPayload;
+  pageCount: number;
+  selectedPages: number[];
+  onPickPdf: () => void;
+  onSelectPdf: (path: string) => void;
+  onPickOutput: () => void;
+  onOutputPathChange: (value: string) => void;
+  onTogglePage: (
+    pageNumber: number,
+    modifiers: { shiftKey: boolean; metaKey: boolean; ctrlKey: boolean },
+  ) => void;
+  onRemoveSelected: () => void;
+  onRestoreSelected: () => void;
+  onRestoreAll: () => void;
+  onRun: () => void;
+}
+
+export function RemovePagesPanel({
+  form,
+  pageCount,
+  selectedPages,
+  onPickPdf,
+  onSelectPdf,
+  onPickOutput,
+  onOutputPathChange,
+  onTogglePage,
+  onRemoveSelected,
+  onRestoreSelected,
+  onRestoreAll,
+  onRun,
+}: RemovePagesPanelProps) {
+  const removedPageNumbers = form.removedPages.map((pageIndex) => pageIndex + 1);
+  const remainingPages = Math.max(0, pageCount - form.removedPages.length);
+
+  return (
+    <div className="tool-layout tool-layout--preview">
+      <div className="tool-layout__content">
+        <Section
+          title="Remove Pages"
+          description="Click pages to remove them instantly, or multi-select pages before removing them in bulk."
+        >
+          <DropZone
+            title="Choose a PDF"
+            description="Open a PDF, preview every page, then export a version with selected pages removed."
+            cta="Choose PDF"
+            allowMultiple={false}
+            acceptedExtensions={['pdf']}
+            onPick={onPickPdf}
+            onFilesDropped={(paths) => onSelectPdf(paths[0])}
+          />
+
+          <div className="selection-summary">
+            <div className="selection-chip">
+              <strong>{pageCount}</strong>
+              <span>Total pages</span>
+            </div>
+            <div className="selection-chip">
+              <strong>{remainingPages}</strong>
+              <span>Remaining</span>
+            </div>
+            <div className="selection-chip selection-chip--danger">
+              <strong>{form.removedPages.length}</strong>
+              <span>Removed</span>
+            </div>
+            <div className="selection-chip">
+              <strong>{selectedPages.length}</strong>
+              <span>Selected</span>
+            </div>
+          </div>
+
+          <div className="button-row">
+            <button type="button" className="button button--secondary" onClick={onRemoveSelected}>
+              Remove selected
+            </button>
+            <button type="button" className="button button--secondary" onClick={onRestoreSelected}>
+              Restore selected
+            </button>
+            <button type="button" className="button button--ghost" onClick={onRestoreAll}>
+              Restore all
+            </button>
+          </div>
+
+          <div className="hint-panel">
+            <strong>Selection tips</strong>
+            <p>Click any page to toggle removal. Hold Ctrl or Cmd to multi-select. Hold Shift to select a range.</p>
+          </div>
+
+          {removedPageNumbers.length > 0 ? (
+            <div className="removed-pages-strip">
+              {removedPageNumbers.map((pageNumber) => (
+                <span key={pageNumber} className="removed-pages-strip__item">
+                  Page {pageNumber}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <div className="panel-empty">No pages are marked for removal yet.</div>
+          )}
+
+          <Field label="Output PDF">
+            <OutputPathRow
+              value={form.outputPath}
+              placeholder="Save cleaned PDF as..."
+              onChange={onOutputPathChange}
+              onPick={onPickOutput}
+            />
+          </Field>
+          <button type="button" className="button" onClick={onRun}>
+            Export cleaned PDF
+          </button>
+        </Section>
+      </div>
+      <div className="tool-layout__preview">
+        <Section title="Page Preview">
+          {form.pdfPath ? (
+            <PdfThumbnailGrid
+              filePath={form.pdfPath}
+              selectedPages={selectedPages}
+              removedPages={removedPageNumbers}
+              onPageClick={onTogglePage}
+            />
+          ) : (
+            <div className="panel-empty">Choose a PDF to preview, select, and remove pages.</div>
           )}
         </Section>
       </div>

@@ -12,7 +12,8 @@ export const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'bmp', 'tif', 'ti
 export const TOOL_TITLES: Record<ToolId, string> = {
   dashboard: 'Overview',
   'pdf-to-image': 'PDF to Image',
-  'image-to-pdf': 'Image to PDF',
+  'image-to-pdf': 'Convert to PDF',
+  'remove-pages': 'Remove Pages',
   merge: 'Merge PDFs',
   split: 'Split PDF',
   compress: 'Compress PDF',
